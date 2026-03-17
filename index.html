@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>翻译 Translate</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #fff;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  textarea {
+    flex: 1;
+    font-size: 48px;
+    line-height: 1.4;
+    padding: 20px;
+    border: 3px solid #ccc;
+    border-radius: 16px;
+    resize: none;
+    outline: none;
+    font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
+  }
+
+  textarea:focus {
+    border-color: #4A90D9;
+  }
+
+  textarea::placeholder {
+    color: #bbb;
+  }
+
+  button {
+    padding: 20px;
+    font-size: 32px;
+    font-weight: 600;
+    background: #4A90D9;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:active {
+    background: #357ABD;
+  }
+
+  #output {
+    flex: 1;
+    font-size: 44px;
+    line-height: 1.4;
+    padding: 20px;
+    background: #F5F5F5;
+    border-radius: 16px;
+    overflow-y: auto;
+    color: #333;
+  }
+
+  #output.placeholder {
+    color: #bbb;
+  }
+
+  .clear-btn {
+    position: absolute;
+    bottom: 28px;
+    right: 28px;
+    background: #ccc;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+    line-height: 44px;
+    text-align: center;
+    cursor: pointer;
+    display: none;
+    padding: 0;
+  }
+
+  .input-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    min-height: 0;
+  }
+
+  .input-wrap textarea { width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="input-wrap">
+  <textarea id="input" placeholder="在这里写字..." autofocus></textarea>
+  <button class="clear-btn" id="clearBtn" onclick="clearInput()">✕</button>
+</div>
+
+<button onclick="doTranslate()">翻译 Translate</button>
+
+<div id="output" class="placeholder">English will appear here...</div>
+
+<script>
+  const input = document.getElementById('input');
+  const output = document.getElementById('output');
+  const clearBtn = document.getElementById('clearBtn');
+
+  input.addEventListener('input', () => {
+    clearBtn.style.display = input.value ? 'block' : 'none';
+  });
+
+  function clearInput() {
+    input.value = '';
+    output.textContent = 'English will appear here...';
+    output.classList.add('placeholder');
+    clearBtn.style.display = 'none';
+    input.focus();
+  }
+
+  async function doTranslate() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    output.classList.remove('placeholder');
+    output.textContent = 'Translating...';
+
+    try {
+      const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=${encodeURIComponent(text)}`);
+      const data = await res.json();
+      output.textContent = data[0].map(s => s[0]).join('');
+    } catch (e) {
+      output.textContent = 'Error: ' + e.message;
+    }
+  }
+</script>
+
+</body>
+</html>
