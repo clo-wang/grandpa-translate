@@ -4,11 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>翻译 Translate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: -apple-system, sans-serif;
+    font-family: 'Figtree', -apple-system, sans-serif;
+    letter-spacing: -0.02em;
     background: #fff;
     height: 100dvh;
     display: flex;
@@ -37,24 +41,26 @@
     color: #bbb;
   }
 
-  button {
+  .translate-btn {
     padding: 20px;
     font-size: 32px;
-    font-weight: 600;
-    background: #4A90D9;
-    color: white;
+    font-weight: 400;
+    font-family: 'Figtree', -apple-system, sans-serif;
+    background: #53ED69;
+    color: #000000;
     border: none;
     border-radius: 16px;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
 
-  button:active {
-    background: #357ABD;
+  .translate-btn:active {
+    opacity: 0.8;
   }
 
   #output {
     flex: 1;
+    font-family: 'Figtree', -apple-system, sans-serif;
     font-size: 44px;
     line-height: 1.4;
     padding: 20px;
@@ -68,22 +74,26 @@
     color: #bbb;
   }
 
-  .clear-btn {
+  .action-btn {
     position: absolute;
-    bottom: 28px;
-    right: 28px;
-    background: #ccc;
-    color: white;
+    bottom: 16px;
+    right: 16px;
+    background: #FF8A42;
+    color: #000000;
     border: none;
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
+    border-radius: 12px;
+    padding: 10px 20px;
     font-size: 24px;
-    line-height: 44px;
-    text-align: center;
+    align-items: center;
+    gap: 6px;
+    font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
     cursor: pointer;
     display: none;
-    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .action-btn:active {
+    opacity: 0.8;
   }
 
   .input-wrap {
@@ -100,27 +110,63 @@
 
 <div class="input-wrap">
   <textarea id="input" placeholder="在这里写字..." autofocus></textarea>
-  <button class="clear-btn" id="clearBtn" onclick="clearInput()">✕</button>
+  <button class="action-btn" id="actionBtn"></button>
 </div>
 
-<button onclick="doTranslate()">翻译 Translate</button>
+<button class="translate-btn" onclick="doTranslate()">翻译 Translate</button>
 
 <div id="output" class="placeholder">English will appear here...</div>
 
 <script>
   const input = document.getElementById('input');
   const output = document.getElementById('output');
-  const clearBtn = document.getElementById('clearBtn');
+  const actionBtn = document.getElementById('actionBtn');
+
+  let savedText = '';
+  let savedTranslation = '';
+  let isUndo = false;
 
   input.addEventListener('input', () => {
-    clearBtn.style.display = input.value ? 'block' : 'none';
+    if (input.value) {
+      showClear();
+    } else {
+      actionBtn.style.display = 'none';
+    }
   });
 
+  function showClear() {
+    isUndo = false;
+    actionBtn.innerHTML = '清除 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    actionBtn.style.background = '#FF8A42';
+    actionBtn.style.display = 'flex';
+    actionBtn.onclick = clearInput;
+  }
+
+  function showUndo() {
+    isUndo = true;
+    actionBtn.innerHTML = '撤消 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg>';
+    actionBtn.style.background = '#FFE240';
+    actionBtn.style.display = 'flex';
+    actionBtn.onclick = undoInput;
+  }
+
   function clearInput() {
+    savedText = input.value;
+    savedTranslation = output.textContent;
     input.value = '';
     output.textContent = 'English will appear here...';
     output.classList.add('placeholder');
-    clearBtn.style.display = 'none';
+    showUndo();
+    input.focus();
+  }
+
+  function undoInput() {
+    input.value = savedText;
+    if (savedTranslation && savedTranslation !== 'English will appear here...') {
+      output.textContent = savedTranslation;
+      output.classList.remove('placeholder');
+    }
+    showClear();
     input.focus();
   }
 
