@@ -21,6 +21,27 @@
     gap: 12px;
   }
 
+  .history-btn {
+    align-self: flex-end;
+    padding: 16px 22px;
+    font-size: 26px;
+    font-weight: 500;
+    font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
+    background: #98DBFF;
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .history-btn:active {
+    opacity: 0.8;
+  }
+
   textarea {
     flex: 1;
     font-size: 48px;
@@ -84,10 +105,11 @@
     color: #000000;
     border: none;
     border-radius: 12px;
-    padding: 20px 28px;
-    font-size: 32px;
+    padding: 16px 22px;
+    font-size: 26px;
+    font-weight: 500;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
     cursor: pointer;
     display: none;
@@ -106,9 +128,105 @@
   }
 
   .input-wrap textarea { width: 100%; }
+
+  /* History overlay */
+  .history-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    z-index: 100;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .history-overlay.open {
+    display: flex;
+  }
+
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .history-title {
+    font-size: 32px;
+    font-weight: 500;
+    font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
+  }
+
+  .history-close {
+    padding: 16px 22px;
+    font-size: 26px;
+    font-weight: 500;
+    font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
+    background: #98DBFF;
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .history-close:active {
+    opacity: 0.8;
+  }
+
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .history-item {
+    padding: 20px;
+    background: #F5F5F5;
+    border-radius: 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .history-item:active {
+    background: #E8E8E8;
+  }
+
+  .history-zh {
+    font-size: 36px;
+    font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
+    font-weight: 400;
+    margin-bottom: 8px;
+    color: #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-en {
+    font-size: 28px;
+    font-family: 'Figtree', -apple-system, sans-serif;
+    font-weight: 500;
+    color: #666;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-empty {
+    font-size: 28px;
+    color: #bbb;
+    text-align: center;
+    margin-top: 40px;
+  }
 </style>
 </head>
 <body>
+
+<button class="history-btn" onclick="openHistory()"><svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 历史 History</button>
 
 <div class="input-wrap">
   <textarea id="input" placeholder="在这里写字..." autofocus></textarea>
@@ -119,14 +237,69 @@
 
 <div id="output" class="placeholder">English will appear here...</div>
 
+<div class="history-overlay" id="historyOverlay">
+  <div class="history-header">
+    <span class="history-title">历史 History</span>
+    <button class="history-close" onclick="closeHistory()">关闭 Close</button>
+  </div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
 <script>
   const input = document.getElementById('input');
   const output = document.getElementById('output');
   const actionBtn = document.getElementById('actionBtn');
+  const historyOverlay = document.getElementById('historyOverlay');
+  const historyList = document.getElementById('historyList');
 
   let savedText = '';
   let savedTranslation = '';
   let isUndo = false;
+
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem('translateHistory') || '[]'); }
+    catch { return []; }
+  }
+
+  function saveToHistory(zh, en) {
+    const history = getHistory();
+    history.unshift({ zh, en, time: Date.now() });
+    if (history.length > 100) history.length = 100;
+    localStorage.setItem('translateHistory', JSON.stringify(history));
+  }
+
+  function openHistory() {
+    const history = getHistory();
+    historyList.innerHTML = '';
+    if (history.length === 0) {
+      historyList.innerHTML = '<div class="history-empty">还没有历史 No history yet</div>';
+    } else {
+      history.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `<div class="history-zh">${escapeHtml(item.zh)}</div><div class="history-en">${escapeHtml(item.en)}</div>`;
+        div.onclick = () => {
+          input.value = item.zh;
+          output.textContent = item.en;
+          output.classList.remove('placeholder');
+          showClear();
+          closeHistory();
+        };
+        historyList.appendChild(div);
+      });
+    }
+    historyOverlay.classList.add('open');
+  }
+
+  function closeHistory() {
+    historyOverlay.classList.remove('open');
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
   input.addEventListener('input', () => {
     if (input.value) {
@@ -138,7 +311,7 @@
 
   function showClear() {
     isUndo = false;
-    actionBtn.innerHTML = '清除 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    actionBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 清除';
     actionBtn.style.background = '#FF8A42';
     actionBtn.style.display = 'flex';
     actionBtn.onclick = clearInput;
@@ -146,7 +319,7 @@
 
   function showUndo() {
     isUndo = true;
-    actionBtn.innerHTML = '撤消 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg>';
+    actionBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg> 撤消';
     actionBtn.style.background = '#FFE240';
     actionBtn.style.display = 'flex';
     actionBtn.onclick = undoInput;
@@ -182,7 +355,9 @@
     try {
       const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=${encodeURIComponent(text)}`);
       const data = await res.json();
-      output.textContent = data[0].map(s => s[0]).join('');
+      const translated = data[0].map(s => s[0]).join('');
+      output.textContent = translated;
+      saveToHistory(text, translated);
     } catch (e) {
       output.textContent = 'Error: ' + e.message;
     }
