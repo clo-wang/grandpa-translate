@@ -63,7 +63,31 @@
     color: #bbb;
   }
 
+  .btn-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .mode-btn {
+    padding: 20px;
+    font-size: 26px;
+    font-weight: 500;
+    font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
+    background: #F0F0F0;
+    color: #000;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+  }
+
+  .mode-btn:active {
+    opacity: 0.8;
+  }
+
   .translate-btn {
+    flex: 1;
     padding: 20px;
     font-size: 32px;
     font-weight: 500;
@@ -229,11 +253,14 @@
 <button class="history-btn" onclick="openHistory()"><svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 历史 History</button>
 
 <div class="input-wrap">
-  <textarea id="input" placeholder="在这里写字..." autofocus></textarea>
+  <textarea id="input" placeholder="在这里写字..." lang="zh" autofocus></textarea>
   <button class="action-btn" id="actionBtn"></button>
 </div>
 
-<button class="translate-btn" onclick="doTranslate()">翻译 Translate</button>
+<div class="btn-row">
+  <button class="mode-btn" id="modeBtn" onclick="toggleMode()">中文 → English</button>
+  <button class="translate-btn" onclick="doTranslate()">翻译 Translate</button>
+</div>
 
 <div id="output" class="placeholder">English will appear here...</div>
 
@@ -252,9 +279,31 @@
   const historyOverlay = document.getElementById('historyOverlay');
   const historyList = document.getElementById('historyList');
 
+  const modeBtn = document.getElementById('modeBtn');
+
   let savedText = '';
   let savedTranslation = '';
   let isUndo = false;
+  let mode = 'zh2en'; // 'zh2en' or 'en2zh'
+
+  function toggleMode() {
+    if (mode === 'zh2en') {
+      mode = 'en2zh';
+      modeBtn.textContent = 'English → 中文';
+      input.placeholder = 'Type here...';
+      input.lang = 'en';
+      output.textContent = '中文翻译会出现在这里...';
+    } else {
+      mode = 'zh2en';
+      modeBtn.textContent = '中文 → English';
+      input.placeholder = '在这里写字...';
+      input.lang = 'zh';
+      output.textContent = 'English will appear here...';
+    }
+    input.value = '';
+    output.classList.add('placeholder');
+    actionBtn.style.display = 'none';
+  }
 
   function getHistory() {
     try { return JSON.parse(localStorage.getItem('translateHistory') || '[]'); }
@@ -263,7 +312,7 @@
 
   function saveToHistory(zh, en) {
     const history = getHistory();
-    history.unshift({ zh, en, time: Date.now() });
+    history.unshift({ zh, en, mode, time: Date.now() });
     if (history.length > 100) history.length = 100;
     localStorage.setItem('translateHistory', JSON.stringify(history));
   }
@@ -279,8 +328,22 @@
         div.className = 'history-item';
         div.innerHTML = `<div class="history-zh">${escapeHtml(item.zh)}</div><div class="history-en">${escapeHtml(item.en)}</div>`;
         div.onclick = () => {
-          input.value = item.zh;
-          output.textContent = item.en;
+          const itemMode = item.mode || 'zh2en';
+          if (itemMode === 'zh2en') {
+            mode = 'zh2en';
+            modeBtn.textContent = '中文 → English';
+            input.placeholder = '在这里写字...';
+            input.lang = 'zh';
+            input.value = item.zh;
+            output.textContent = item.en;
+          } else {
+            mode = 'en2zh';
+            modeBtn.textContent = 'English → 中文';
+            input.placeholder = 'Type here...';
+            input.lang = 'en';
+            input.value = item.en;
+            output.textContent = item.zh;
+          }
           output.classList.remove('placeholder');
           showClear();
           closeHistory();
@@ -311,7 +374,7 @@
 
   function showClear() {
     isUndo = false;
-    actionBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 清除';
+    actionBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 清除 Clear';
     actionBtn.style.background = '#FF8A42';
     actionBtn.style.display = 'flex';
     actionBtn.onclick = clearInput;
@@ -319,17 +382,21 @@
 
   function showUndo() {
     isUndo = true;
-    actionBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg> 撤消';
+    actionBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg> 撤消 Undo';
     actionBtn.style.background = '#FFE240';
     actionBtn.style.display = 'flex';
     actionBtn.onclick = undoInput;
+  }
+
+  function getOutputPlaceholder() {
+    return mode === 'zh2en' ? 'English will appear here...' : '中文翻译会出现在这里...';
   }
 
   function clearInput() {
     savedText = input.value;
     savedTranslation = output.textContent;
     input.value = '';
-    output.textContent = 'English will appear here...';
+    output.textContent = getOutputPlaceholder();
     output.classList.add('placeholder');
     showUndo();
     input.focus();
@@ -350,14 +417,19 @@
     if (!text) return;
 
     output.classList.remove('placeholder');
-    output.textContent = 'Translating...';
+    output.textContent = mode === 'zh2en' ? 'Translating...' : '翻译中...';
+
+    const sl = mode === 'zh2en' ? 'zh-CN' : 'en';
+    const tl = mode === 'zh2en' ? 'en' : 'zh-CN';
 
     try {
-      const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=${encodeURIComponent(text)}`);
+      const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`);
       const data = await res.json();
       const translated = data[0].map(s => s[0]).join('');
       output.textContent = translated;
-      saveToHistory(text, translated);
+      const zh = mode === 'zh2en' ? text : translated;
+      const en = mode === 'zh2en' ? translated : text;
+      saveToHistory(zh, en);
     } catch (e) {
       output.textContent = 'Error: ' + e.message;
     }
