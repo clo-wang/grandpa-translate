@@ -206,32 +206,6 @@
     gap: 12px;
   }
 
-  .history-item-wrap {
-    position: relative;
-    border-radius: 16px;
-    overflow: hidden;
-  }
-
-  .history-delete {
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    width: 140px;
-    background: #FF4444;
-    color: #fff;
-    border: none;
-    font-size: 26px;
-    font-weight: 500;
-    font-family: -apple-system, "PingFang SC", "Heiti SC", sans-serif;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .history-delete:active {
-    opacity: 0.8;
-  }
-
   .history-item {
     position: relative;
     padding: 20px;
@@ -240,9 +214,6 @@
     border-radius: 16px;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transform: translateX(0);
-    transition: transform 0.2s ease;
-    touch-action: pan-y;
   }
 
   .trash-btn {
@@ -264,14 +235,6 @@
 
   .trash-btn:active {
     background: rgba(255, 68, 68, 0.15);
-  }
-
-  .history-item.swiping {
-    transition: none;
-  }
-
-  .history-item.revealed {
-    transform: translateX(-140px);
   }
 
   .history-item:active {
@@ -409,17 +372,6 @@
       historyList.innerHTML = '<div class="history-empty">还没有历史 No history yet</div>';
     } else {
       history.forEach((item, i) => {
-        const wrap = document.createElement('div');
-        wrap.className = 'history-item-wrap';
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'history-delete';
-        delBtn.textContent = '删除 Delete';
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          deleteHistoryItem(i);
-        };
-
         const div = document.createElement('div');
         div.className = 'history-item';
         div.innerHTML = `<div class="history-zh">${escapeHtml(item.zh)}</div><div class="history-en">${escapeHtml(item.en)}</div><button class="trash-btn" aria-label="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
@@ -430,10 +382,6 @@
         };
         trashBtn.ontouchstart = (e) => { e.stopPropagation(); };
         div.onclick = () => {
-          if (div.classList.contains('revealed')) {
-            div.classList.remove('revealed');
-            return;
-          }
           const itemMode = item.mode || 'zh2en';
           if (itemMode === 'zh2en') {
             mode = 'zh2en';
@@ -455,10 +403,7 @@
           closeHistory();
         };
 
-        attachSwipe(div);
-        wrap.appendChild(delBtn);
-        wrap.appendChild(div);
-        historyList.appendChild(wrap);
+        historyList.appendChild(div);
       });
     }
     historyOverlay.classList.add('open');
@@ -473,58 +418,6 @@
     history.splice(index, 1);
     localStorage.setItem('translateHistory', JSON.stringify(history));
     openHistory();
-  }
-
-  function attachSwipe(el) {
-    let startX = 0, startY = 0, currentX = 0, dragging = false, decided = false, horizontal = false;
-    const threshold = 70;
-    const maxReveal = 140;
-
-    el.addEventListener('touchstart', (e) => {
-      // close any other revealed items
-      document.querySelectorAll('.history-item.revealed').forEach(other => {
-        if (other !== el) other.classList.remove('revealed');
-      });
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      currentX = 0;
-      dragging = true;
-      decided = false;
-      horizontal = false;
-    }, { passive: true });
-
-    el.addEventListener('touchmove', (e) => {
-      if (!dragging) return;
-      const dx = e.touches[0].clientX - startX;
-      const dy = e.touches[0].clientY - startY;
-      if (!decided) {
-        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-          horizontal = Math.abs(dx) > Math.abs(dy);
-          decided = true;
-          if (horizontal) el.classList.add('swiping');
-        }
-      }
-      if (!horizontal) return;
-      const base = el.classList.contains('revealed') ? -maxReveal : 0;
-      let offset = base + dx;
-      if (offset > 0) offset = 0;
-      if (offset < -maxReveal) offset = -maxReveal - (offset + maxReveal) * 0.2;
-      currentX = offset;
-      el.style.transform = `translateX(${offset}px)`;
-    }, { passive: true });
-
-    el.addEventListener('touchend', () => {
-      if (!dragging) return;
-      dragging = false;
-      if (!horizontal) return;
-      el.classList.remove('swiping');
-      el.style.transform = '';
-      if (currentX < -threshold) {
-        el.classList.add('revealed');
-      } else {
-        el.classList.remove('revealed');
-      }
-    });
   }
 
   function escapeHtml(text) {
